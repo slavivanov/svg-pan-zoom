@@ -50,6 +50,9 @@
     "pan",
     "zoom"
   ],
+  "dependencies": {
+    "normalize-wheel": "^1.0.1"
+  },
   "devDependencies": {
     "browserify": "^8.0.3",
     "gulp": "^3.8.10",

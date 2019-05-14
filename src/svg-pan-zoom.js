@@ -4,6 +4,8 @@ var Wheel = require('./uniwheel')
 , SvgUtils = require('./svg-utilities')
 , ShadowViewport = require('./shadow-viewport')
 
+const normalizeWheel = require('normalize-wheel');
+
 var SvgPanZoom = function(svg, options) {
   this.init(svg, options)
 }
@@ -189,12 +191,17 @@ SvgPanZoom.prototype.enableMouseWheelZoom = function() {
 
     // Mouse wheel listener
     this.wheelListener = function(evt) {
-      return that.handleMouseWheel(evt);
+      const normalized = normalizeWheel(evt);
+      return that.handleMouseWheel(evt, normalized);
+    }
+    if (this.options.eventsListenerElement || this.svg) {
+      console.log(normalizeWheel.getEventType());
+      (this.options.eventsListenerElement || this.svg).addEventListener(normalizeWheel.getEventType(), this.wheelListener);
     }
 
     // Bind wheelListener
     var isPassiveListener = !this.options.preventMouseEventsDefault
-    Wheel.on(this.options.eventsListenerElement || this.svg, this.wheelListener, isPassiveListener)
+    //Wheel.on(this.options.eventsListenerElement || this.svg, this.wheelListener, isPassiveListener)
 
     this.options.mouseWheelZoomEnabled = true
   }
@@ -206,7 +213,10 @@ SvgPanZoom.prototype.enableMouseWheelZoom = function() {
 SvgPanZoom.prototype.disableMouseWheelZoom = function() {
   if (this.options.mouseWheelZoomEnabled) {
     var isPassiveListener = !this.options.preventMouseEventsDefault
-    Wheel.off(this.options.eventsListenerElement || this.svg, this.wheelListener, isPassiveListener)
+    // Wheel.off(this.options.eventsListenerElement || this.svg, this.wheelListener, isPassiveListener)
+    if (this.options.eventsListenerElement || this.svg) {
+      (this.options.eventsListenerElement || this.svg).removeEventListener(normalizeWheel.getEventType(), this.wheelListener);
+    }
     this.options.mouseWheelZoomEnabled = false
   }
 }
@@ -216,7 +226,7 @@ SvgPanZoom.prototype.disableMouseWheelZoom = function() {
  *
  * @param  {Event} evt
  */
-SvgPanZoom.prototype.handleMouseWheel = function(evt) {
+SvgPanZoom.prototype.handleMouseWheel = function(evt, normalized) {
   if (!this.options.zoomEnabled || this.state !== 'none') {
     return;
   }
@@ -228,7 +238,7 @@ SvgPanZoom.prototype.handleMouseWheel = function(evt) {
       evt.returnValue = false;
     }
   }
-
+  /*
   // Default delta in case that deltaY is not available
   var delta = evt.deltaY || 1
     , timeDelta = Date.now() - this.lastMouseWheelEventTime
@@ -243,10 +253,13 @@ SvgPanZoom.prototype.handleMouseWheel = function(evt) {
   }
 
   delta = -0.3 < delta && delta < 0.3 ? delta : (delta > 0 ? 1 : -1) * Math.log(Math.abs(delta) + 10) / divider
+  */
+  const delta = normalized ? normalized.spinY : 0;
 
   var inversedScreenCTM = this.svg.getScreenCTM().inverse()
     , relativeMousePoint = SvgUtils.getEventPoint(evt, this.svg).matrixTransform(inversedScreenCTM)
-    , zoom = Math.pow(1 + this.options.zoomScaleSensitivity, (-1) * delta); // multiplying by neg. 1 so as to make zoom in/out behavior match Google maps behavior
+    , zoom = 1 + this.options.zoomScaleSensitivity * (-1) * delta; //
+    // , zoom = Math.pow(1 + this.options.zoomScaleSensitivity, (-1) * delta); // multiplying by neg. 1 so as to make zoom in/out behavior match Google maps behavior
 
   this.zoomAtPoint(zoom, relativeMousePoint)
 }
